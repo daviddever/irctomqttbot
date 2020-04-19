@@ -41,16 +41,16 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
 
 
 class Publisher:
-    def __init___(self, topic, message):
-        self.message = message
-        self.topic = topic
+    def __init__(self, mqtt_host, mqtt_port):
+        self.mqtt_host = mqtt_host
+        self.mqtt_port = mqtt_port
 
-        client = mqtt.Client('sender')
-        client.connect(mqtt_host, port=mqtt_port, keepalive=60, bind_address='')
-        print(mqtt_host)
+        self.client = mqtt.Client('sender')
+        self.client.connect(mqtt_host, port=mqtt_port, keepalive=60, bind_address='')
+        print('connected to ' + mqtt_host)
 
     def send_message(self, topic, message):
-        client.publish(topic, message)
+        self.client.publish(topic, message)
 
 
 def main():
@@ -62,8 +62,8 @@ def main():
 
     # MQTT settings
     mqtt_host = '192.168.86.5'
-    mqtt_port = '1883'
-    
+    mqtt_port = 1883
+
     publisher = Publisher(mqtt_host, mqtt_port)
     bot = ListenerBot(irc_channel, irc_nickname, irc_server, irc_port, publisher)
     bot.start()
