@@ -7,7 +7,8 @@ import paho.mqtt.client as mqtt
 
 
 class ListenerBot(irc.bot.SingleServerIRCBot):
-    def __init__(self, irc_channel, irc_nickname, irc_server, irc_port):
+    def __init__(self, irc_channel, irc_nickname, irc_server, irc_port, publisher):
+        self.publisher = publisher
         irc.bot.SingleServerIRCBot.__init__(self, [(irc_server, irc_port)], irc_nickname, irc_nickname)
         self.irc_channel = irc_channel
 
@@ -34,7 +35,7 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
         if 'light' in cmd:
             message = cmd.split('=')[1]
             print(message)
-            Publisher.send_message('irc/light', message)
+            self.publisher.send_message('irc/light', message)
         else:
             c.notice(nick, 'Sorry I don\'t know what a ' + cmd + ' is')
 
@@ -60,12 +61,11 @@ def main():
     irc_port = 6667
 
     # MQTT settings
-    global mqtt_host
-    global mqtt_port
     mqtt_host = '192.168.86.5'
     mqtt_port = '1883'
-
-    bot = ListenerBot(irc_channel, irc_nickname, irc_server, irc_port)
+    
+    publisher = Publisher(mqtt_host, mqtt_port)
+    bot = ListenerBot(irc_channel, irc_nickname, irc_server, irc_port, publisher)
     bot.start()
 
 
