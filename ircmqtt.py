@@ -4,6 +4,7 @@ import irc.bot
 import irc.strings
 from irc.client import ip_numstr_to_quad, ip_quad_to_numstr
 import paho.mqtt.client as mqtt
+import time
 
 
 class ListenerBot(irc.bot.SingleServerIRCBot):
@@ -17,7 +18,7 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
 
     def on_welcome(self, c, e):
         c.join(self.irc_channel)
-        print('connected to irc!')
+        print('connected to ' + self.irc_channel)
 
     def on_pubmsg(self, c, e):
         a = e.arguments[0].split(":", 1)
@@ -29,13 +30,12 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
         nick = e.source.nick
         c = self.connection
 
-        if cmd == 'say':
-            # TODO: split string and send text after say as a mqtt message
-            pass
         if 'light' in cmd:
+            print(cmd)
             message = cmd.split('=')[1]
-            print(message)
             self.publisher.send_message('irc/light', message)
+            time.sleep(5)
+            self.publisher.send_message('irc/light', '')
         else:
             c.notice(nick, 'Sorry I don\'t know what a ' + cmd + ' is')
 

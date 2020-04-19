@@ -1,0 +1,15 @@
+importlib-metadata==1.6.0
+importlib-resources==1.4.0
+irc==18.0.0
+jaraco.classes==3.1.0
+jaraco.collections==3.0.0
+jaraco.functools==3.0.0
+jaraco.logging==3.0.0
+jaraco.stream==3.0.0
+jaraco.text==3.2.0
+more-itertools==8.2.0
+paho-mqtt==1.5.0
+pytz==2019.3
+six==1.14.0
+tempora==3.0.0
+zipp==3.1.0
