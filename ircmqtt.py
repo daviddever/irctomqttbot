@@ -7,15 +7,16 @@ import paho.mqtt.client as mqtt
 
 
 class ListenerBot(irc.bot.SingleServerIRCBot):
-    def __init__(self, channel, nickname, server, port):
-        irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
-        self.channel = channel
+    def __init__(self, irc_channel, irc_nickname, irc_server, irc_port):
+        irc.bot.SingleServerIRCBot.__init__(self, [(irc_server, irc_port)], irc_nickname, irc_nickname)
+        self.irc_channel = irc_channel
 
-    def on_nicknameinuse(self, channel, nickname, server, port):
+    def on_nicknameinuse(self, irc_channel, irc_nickname, irc_server, irc_port):
         c.nick(c.get_nickname() + '_')
 
     def on_welcome(self, c, e):
-        c.join(self.channel)
+        c.join(self.irc_channel)
+        print('connected to irc!')
 
     def on_pubmsg(self, c, e):
         a = e.arguments[0].split(":", 1)
@@ -30,38 +31,41 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
         if cmd == 'say':
             # TODO: split string and send text after say as a mqtt message
             pass
+        if 'light' in cmd:
+            message = cmd.split('=')[1]
+            print(message)
+            Publisher.send_message('irc/light', message)
         else:
             c.notice(nick, 'Sorry I don\'t know what a ' + cmd + ' is')
 
 
 class Publisher:
-    def __init___(self, message, host, port, topic, target):
+    def __init___(self, topic, message):
         self.message = message
-        self.host = host
-        self.port = port
         self.topic = topic
-        self.target = target
 
-    def send_message(self, message, host, port, topic, target):
         client = mqtt.Client('sender')
-        client.connect(host, port=port, keepalive=60, bind_address='')
-        client.publish(topic + '/' + target, message)
+        client.connect(mqtt_host, port=mqtt_port, keepalive=60, bind_address='')
+        print(mqtt_host)
+
+    def send_message(self, topic, message):
+        client.publish(topic, message)
 
 
 def main():
     # IRC settings
-    channel = '#mqttbot'
-    nickname = 'mqttbot'
-    server = 'irc.freenode.net'
+    irc_channel = '#mqttbot'
+    irc_nickname = 'mqttbot'
+    irc_server = 'irc.freenode.net'
     irc_port = 6667
 
     # MQTT settings
-    host = '192.168.86.5'
-    port = '1883'
-    topic = 'irc'
-    target = 'say'
+    global mqtt_host
+    global mqtt_port
+    mqtt_host = '192.168.86.5'
+    mqtt_port = '1883'
 
-    bot = ListenerBot(channel, nickname, server, irc_port)
+    bot = ListenerBot(irc_channel, irc_nickname, irc_server, irc_port)
     bot.start()
 
 
