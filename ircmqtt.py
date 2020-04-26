@@ -34,15 +34,29 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
     def do_command(self, e, cmd):
         nick = e.source.nick
         c = self.connection
+        print(cmd)
+        message = cmd.split("=")[1]
+        print(messsage)
+        print(cmd.split("=")[0])
 
-        if "light" in cmd:
-            print(cmd)
-            message = cmd.split("=")[1]
-            self.publisher.send_message("irc/light", message)
-            time.sleep(5)
-            self.publisher.send_message("irc/light", "")
+        for command in full_config["commands"].items():
+            print(command)
+            if command[1]["trigger"] == message:
+                print(message)
+                self.publisher.send_message(command[1]["topic"], command[1]["message"])
+                time.sleep(5)
+                self.publisher.send_message(command[1]["topic"], "")
         else:
             c.notice(nick, "Sorry I don't know what a " + cmd + " is")
+
+        # if "light" in cmd:
+        #    print(cmd)
+        #    message = cmd.split("=")[1]
+        #    self.publisher.send_message("irc/light", message)
+        #    time.sleep(5)
+        #    self.publisher.send_message("irc/light", "")
+        # else:
+        #    c.notice(nick, "Sorry I don't know what a " + cmd + " is")
 
 
 class Publisher:
@@ -67,6 +81,7 @@ def read_config(config_file_path):
 
 def main():
     # Read in configuration
+    global full_config
     full_config = read_config("./config.yaml")
 
     # IRC settings
