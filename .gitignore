@@ -132,3 +132,6 @@ dmypy.json
 *~
 *.swp
 *.swo
+
+# Config files
+config.yaml
