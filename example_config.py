@@ -1,22 +1,18 @@
 ---
   config:
-    irc_channel: "#mqtt"
+    irc_channel: "#mqttbot"
     irc_nickname: "mqttbot"
     irc_server: "irc.freenode.net"
     irc_port: 6667
 
-    mqtt_host: "mqtthost.some.domain"
+    mqtt_host: "mqtthost.example.com"
     mqtt_port: 1883
 
   commands:
-    turn_on_lights:
-      name: "Turn on Lights"
-      trigger: "light on"
+    lights on:
       topic: "irc/light"
       message: "on"
 
-    turn_off_lights:
-      name: "Turn off Lights"
-      trigger: "light off"
+    lights off:
       topic: "irc/light"
       message: "off"
