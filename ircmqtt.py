@@ -2,7 +2,6 @@
 
 import irc.bot
 import irc.strings
-from irc.client import ip_numstr_to_quad, ip_quad_to_numstr
 import paho.mqtt.client as mqtt
 import time
 import yaml
@@ -29,20 +28,21 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
             self.connection.get_nickname()
         ):
             self.do_command(e, a[1].strip())
-        return
 
     def do_command(self, e, cmd):
+        print(cmd)
         nick = e.source.nick
         c = self.connection
 
-        if "light" in cmd:
-            print(cmd)
-            message = cmd.split("=")[1]
-            self.publisher.send_message("irc/light", message)
+        if cmd in full_config["commands"]:
+            self.publisher.send_message(
+                full_config["commands"][cmd]["topic"],
+                full_config["commands"][cmd]["message"],
+            )
             time.sleep(5)
-            self.publisher.send_message("irc/light", "")
+            self.publisher.send_message(full_config["commands"][cmd]["topic"], "")
         else:
-            c.notice(nick, "Sorry I don't know what a " + cmd + " is")
+            c.notice(nick, "I'm sorry I don't know what a " + cmd + " is")
 
 
 class Publisher:
@@ -67,6 +67,7 @@ def read_config(config_file_path):
 
 def main():
     # Read in configuration
+    global full_config
     full_config = read_config("./config.yaml")
 
     # IRC settings
