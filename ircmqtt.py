@@ -1,17 +1,22 @@
 #! /usr/bin/env python3
 
+import datetime
 import irc.bot
 import irc.strings
-import paho.mqtt.client as mqtt
-import time
+import paho.mqtt.publish as mqtt
 import yaml
 
 
 class ListenerBot(irc.bot.SingleServerIRCBot):
-    def __init__(self, irc_channel, irc_nickname, irc_server, irc_port, publisher):
-        self.publisher = publisher
+    def __init__(
+        self, irc_channel, irc_nickname, irc_server, irc_port,
+    ):
         irc.bot.SingleServerIRCBot.__init__(
-            self, [(irc_server, irc_port)], irc_nickname, irc_nickname
+            self,
+            [(irc_server, irc_port)],
+            irc_nickname,
+            irc_nickname,
+            recon="ExponentialBackoff",
         )
         self.irc_channel = irc_channel
 
@@ -20,7 +25,7 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
 
     def on_welcome(self, c, e):
         c.join(self.irc_channel)
-        print("connected to " + self.irc_channel)
+        print(str(datetime.datetime.now()) + ": " + "connected to " + self.irc_channel)
 
     def on_pubmsg(self, c, e):
         a = e.arguments[0].split(":", 1)
@@ -30,32 +35,30 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
             self.do_command(e, a[1].strip())
 
     def do_command(self, e, cmd):
-        print(cmd)
         nick = e.source.nick
         c = self.connection
 
-        if cmd in full_config["commands"]:
-            self.publisher.send_message(
-                full_config["commands"][cmd]["topic"],
-                full_config["commands"][cmd]["message"],
+        if cmd in commands:
+            mqtt_auth = None
+            if mqtt_username:
+                mqtt_auth = {"username": mqtt_username, "password": mqtt_password}
+
+            mqtt.single(
+                commands[cmd]["topic"],
+                commands[cmd]["message"],
+                qos=0,
+                retain=False,
+                hostname=mqtt_host,
+                port=mqtt_port,
+                client_id=mqtt_client_id,
+                keepalive=60,
+                will=None,
+                auth=mqtt_auth,
+                tls=None,
             )
-            time.sleep(5)
-            self.publisher.send_message(full_config["commands"][cmd]["topic"], "")
+            print(str(datetime.datetime.now()) + ": " + cmd)
         else:
             c.notice(nick, "I'm sorry I don't know what a " + cmd + " is")
-
-
-class Publisher:
-    def __init__(self, mqtt_host, mqtt_port):
-        self.mqtt_host = mqtt_host
-        self.mqtt_port = mqtt_port
-
-        self.client = mqtt.Client("sender")
-        self.client.connect(mqtt_host, port=mqtt_port, keepalive=60, bind_address="")
-        print("connected to " + mqtt_host)
-
-    def send_message(self, topic, message):
-        self.client.publish(topic, message)
 
 
 def read_config(config_file_path):
@@ -67,21 +70,30 @@ def read_config(config_file_path):
 
 def main():
     # Read in configuration
-    global full_config
     full_config = read_config("./config.yaml")
+    global commands
+    commands = full_config["commands"]
+    config = full_config["config"]
 
     # IRC settings
-    irc_channel = full_config["config"]["irc_channel"]
-    irc_nickname = full_config["config"]["irc_nickname"]
-    irc_server = full_config["config"]["irc_server"]
-    irc_port = full_config["config"]["irc_port"]
+    irc_channel = config["irc_channel"]
+    irc_nickname = config["irc_nickname"]
+    irc_server = config["irc_server"]
+    irc_port = config["irc_port"]
 
     # MQTT settings
-    mqtt_host = full_config["config"]["mqtt_host"]
-    mqtt_port = full_config["config"]["mqtt_port"]
+    global mqtt_host
+    global mqtt_port
+    global mqtt_client_id
+    global mqtt_username
+    global mqtt_password
+    mqtt_host = config["mqtt_host"]
+    mqtt_port = config["mqtt_port"]
+    mqtt_client_id = config["mqtt_client_id"]
+    mqtt_username = config["mqtt_username"]
+    mqtt_password = config["mqtt_password"]
 
-    publisher = Publisher(mqtt_host, mqtt_port)
-    bot = ListenerBot(irc_channel, irc_nickname, irc_server, irc_port, publisher)
+    bot = ListenerBot(irc_channel, irc_nickname, irc_server, irc_port,)
     bot.start()
 
 
