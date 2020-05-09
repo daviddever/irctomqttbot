@@ -21,13 +21,16 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
         self.irc_channel = irc_channel
 
     def on_nicknameinuse(self, irc_channel, irc_nickname, irc_server, irc_port):
+        "Actions to take if nick already in use"
         c.nick(c.get_nickname() + "_")
 
     def on_welcome(self, c, e):
+        "Actions to take once connected to IRC server"
         c.join(self.irc_channel)
         print(str(datetime.datetime.now()) + ": " + "connected to " + self.irc_channel)
 
     def on_pubmsg(self, c, e):
+        "Actions to take when bot sees public message with its name"
         a = e.arguments[0].split(":", 1)
         if len(a) > 1 and irc.strings.lower(a[0]) == irc.strings.lower(
             self.connection.get_nickname()
@@ -35,6 +38,7 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
             self.do_command(e, a[1].strip())
 
     def do_command(self, e, cmd):
+        "Check if command in message is defined in config file and if so send appropriate MQTT message"
         nick = e.source.nick
         c = self.connection
 
@@ -62,6 +66,7 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
 
 
 def read_config(config_file_path):
+    "Return a dictionary from yaml config file"
     with open(config_file_path) as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
 
@@ -70,7 +75,7 @@ def read_config(config_file_path):
 
 def main():
     # Read in configuration
-    full_config = read_config("./config.yaml")
+    full_config = read_config("./config/config.yaml")
     global commands
     commands = full_config["commands"]
     config = full_config["config"]
