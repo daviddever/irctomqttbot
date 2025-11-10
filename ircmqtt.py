@@ -8,48 +8,65 @@ import yaml
 
 
 class ListenerBot(irc.bot.SingleServerIRCBot):
-    def __init__(
-        self, irc_channel, irc_nickname, irc_server, irc_port,
-    ):
-        irc.bot.SingleServerIRCBot.__init__(
-            self,
+    def __init__(self, irc_channels, irc_nickname, irc_server, irc_port):
+        super().__init__(
             [(irc_server, irc_port)],
             irc_nickname,
             irc_nickname,
             recon="ExponentialBackoff",
         )
-        self.irc_channel = irc_channel
+        # list of channels to join
+        self.irc_channels = irc_channels
 
-    def on_nicknameinuse(self, irc_channel, irc_nickname, irc_server, irc_port):
-        "Actions to take if nick already in use"
+    def on_nicknameinuse(self, c, e):
+        """Actions to take if nick already in use"""
         c.nick(c.get_nickname() + "_")
 
     def on_welcome(self, c, e):
-        "Actions to take once connected to IRC server"
-        c.join(self.irc_channel)
-        print(str(datetime.datetime.now()) + ": " + "connected to " + self.irc_channel)
+        """Actions to take once connected to IRC server"""
+        # join all configured channels
+        for ch in self.irc_channels:
+            c.join(ch)
+            print(
+                f"{datetime.datetime.now()}: connected to {ch}"
+            )
 
     def on_pubmsg(self, c, e):
-        "Actions to take when bot sees public message with its name"
-        a = e.arguments[0].split(":", 1)
+        """Actions to take when bot sees public message with its name"""
+        # e.arguments[0] is the message text
+        # "<botnick>: command text"
+        msg = e.arguments[0]
+        a = msg.split(":", 1)
         if len(a) > 1 and irc.strings.lower(a[0]) == irc.strings.lower(
             self.connection.get_nickname()
         ):
-            self.do_command(e, a[1].strip())
+            cmd_text = a[1].strip()
+            self.do_command(e, cmd_text)
 
     def do_command(self, e, cmd):
-        "Check if command in message is defined in config file and if so send appropriate MQTT message"
+        """Check if command in message is defined in config file and if so send appropriate MQTT message"""
         nick = e.source.nick
         c = self.connection
 
+        # channel the message came from
+        channel = e.target
+
         if cmd in commands:
+            cmd_cfg = commands[cmd]
+
+            # if the command has a "channels" list, enforce it
+            allowed_channels = cmd_cfg.get("channels")
+            if allowed_channels and channel not in allowed_channels:
+                # command exists but is not allowed in this channel so ignore
+                return
+
             mqtt_auth = None
             if mqtt_username:
                 mqtt_auth = {"username": mqtt_username, "password": mqtt_password}
 
             mqtt.single(
-                commands[cmd]["topic"],
-                commands[cmd]["message"],
+                cmd_cfg["topic"],
+                cmd_cfg["message"],
                 qos=0,
                 retain=False,
                 hostname=mqtt_host,
@@ -60,16 +77,15 @@ class ListenerBot(irc.bot.SingleServerIRCBot):
                 auth=mqtt_auth,
                 tls=None,
             )
-            print(str(datetime.datetime.now()) + ": " + cmd)
+            print(f"{datetime.datetime.now()}: [{channel}] {cmd}")
         else:
             c.notice(nick, "I'm sorry I don't know what a " + cmd + " is")
 
 
 def read_config(config_file_path):
-    "Return a dictionary from yaml config file"
+    """Return a dictionary from yaml config file"""
     with open(config_file_path) as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
-
         return config
 
 
@@ -81,7 +97,18 @@ def main():
     config = full_config["config"]
 
     # IRC settings
-    irc_channel = config["irc_channel"]
+    # support either a single irc_channel (string) or irc_channels (list)
+    irc_channels = config.get("irc_channels")
+
+    if irc_channels is None:
+        # backwards compatibility with existing config: single-channel mode
+        single_channel = config["irc_channel"]
+        irc_channels = [single_channel]
+    else:
+        # Ensure it's a list
+        if isinstance(irc_channels, str):
+            irc_channels = [irc_channels]
+
     irc_nickname = config["irc_nickname"]
     irc_server = config["irc_server"]
     irc_port = config["irc_port"]
@@ -98,7 +125,7 @@ def main():
     mqtt_username = config["mqtt_username"]
     mqtt_password = config["mqtt_password"]
 
-    bot = ListenerBot(irc_channel, irc_nickname, irc_server, irc_port,)
+    bot = ListenerBot(irc_channels, irc_nickname, irc_server, irc_port)
     bot.start()
 
 
