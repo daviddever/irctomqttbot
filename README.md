@@ -27,8 +27,6 @@ docker run -d -v /docker_files/config:/home/appuser/config \
 or with Docker Compose
 
 ```
-version: "3.7"
-
 services:
 
   linkgrabber:
@@ -89,7 +87,7 @@ The `config` section is for the information for the IRC and MQTT settings
 
 
 The `command` section is for setting up the terms the bot looks for in IRC and the MQTT response that will be sent.
-`example_config.yaml` has two example commands.
+`example_config.yaml` has three example commands.
 
 
 ```
@@ -97,10 +95,13 @@ The `command` section is for setting up the terms the bot looks for in IRC and t
     lights on:
       topic: "irc/light"
       message: "on"
+      channels:
+        - "#mqttbot"
 ```
 
 The first element key is the string the IRC bot will watch for (in this case `lights on`)
 The `topic` and `message` key value pairs are used to build the MQTT request.
+If `channels` is used the bot will ignore the command unless it is in the defined channels.
 
 An example of a [Home Assistant](https://home-assistant.io) automation based on the above example.
 

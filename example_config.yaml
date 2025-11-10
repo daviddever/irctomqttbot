@@ -1,8 +1,10 @@
 ---
   config:
-    irc_channel: "#mqttbot"
+    irc_channels: 
+      - "#mqttbot"
+      - "#mqttbot2"
     irc_nickname: "mqttbot"
-    irc_server: "irc.freenode.net"
+    irc_server: "irc.libera.chat"
     irc_port: 6667
 
     mqtt_host: "mqtthost.example.com"
@@ -12,6 +14,7 @@
     mqtt_password:
 
   commands:
+    # Works on all channels because no channel is defined
     lights on:
       topic: "irc/light"
       message: "on"
@@ -19,3 +22,10 @@
     lights off:
       topic: "irc/light"
       message: "off"
+
+    # Only usable in defined channels
+    unlock door:
+      topic: "irc/door"
+      message: "off"
+      channels:
+        - "#mqttbot2"
